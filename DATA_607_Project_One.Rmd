@@ -1,0 +1,86 @@
+---
+title: "DATA_607_Project_One"
+author: "Mathew Katz"
+date: "2022-09-25"
+output:
+  pdf_document: default
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+Project 1: In this project, you’re given a text file with chess tournament results where the information has some structure.  Your job is to create an R Markdown file that generates a .CSV file (that could for example be imported into a SQL database) with the following information for all of the players: Player’s Name, Player’s State, Total Number of Points, Player’s Pre-Rating, and Average Pre Chess Rating of Opponents For the first player, the information would be: Gary Hua, ON, 6.0, 1794, 1605 
+
+
+Loading and Reading the Data
+```{r}
+library(readr, quietly = TRUE)
+library(stringr, quietly = TRUE)
+library(tidyverse, quietly = TRUE)
+
+url = 'https://raw.githubusercontent.com/MathewKatz/CUNYSPS/main/tournamentinfo.txt'
+df <- readLines(url)
+```
+
+```{r}
+head(df)
+```
+
+Extraction of Key Fields:
+```{r}
+player_name <- unlist(str_extract_all(df,"(?<=\\d\\s\\|\\s)([A-z, -]*\\s){1,}[[:alpha:]]*(?=\\s*\\|)"))
+player_state <- unlist(str_extract_all(df, "[[:upper:]]{2}(?=\\s\\|)"))
+total_points <- as.numeric(unlist(str_extract_all(df, "(?<=\\|)\\d\\.\\d")))
+player_pre_rating <- as.numeric(unlist(str_extract_all(df, "(?<=R:\\s{1,2})(\\d{3,4}(?=\\s))|(\\d{3,4}(?=P\\d{1,2}\\s*-))")))
+player_number <- as.numeric(unlist(str_extract_all(df,"(?<=\\s{3,4})\\d{1,2}(?=\\s)")))
+```
+
+Creating Dataframe with Extracted Data
+```{r}
+processed_data <- data.frame(player_name, player_state, total_points, player_pre_rating, player_number)
+```
+
+List of Opponent Player's Numbers
+```{r}
+newdf <- df[seq(5, 196, 3)]
+opponent_num <- as.numeric(unlist(str_extract_all(newdf, "(?<=\\|(W|L|D)\\s{2,3})[[:digit:]]{1,2}(?=\\|)|((?<!->)(?<=\\|(U|H|B|X))\\s{4}(?=\\|))")))
+```
+
+Getting Pre Chess Rating
+```{r}
+pre_chess_rating_matrix <- matrix(data = NA, nrow = 64, ncol = 2)
+
+colnames(pre_chess_rating_matrix) <- c("total_opp_pcr", "avg_opp_pcr")
+
+row_counter <- 0
+
+for(i in seq(from=1, to=length(opponent_num)-6, by=7)){
+  row_counter <- row_counter + 1
+  
+  pre_chess_rating_matrix[row_counter, 1] <- (sum(subset(processed_data$player_pre_rat, processed_data$player_num %in% opponent_num[seq(from=i, to=i+6, by=1)])))
+  
+  pre_chess_rating_matrix[row_counter, 2] <- pre_chess_rating_matrix[row_counter, 1] / length(subset(opponent_num[seq(from=i, to=i+6, by=1)],!is.na(opponent_num[seq(from=i, to=i+6, by=1)])))}
+
+head(pre_chess_rating_matrix)
+```
+
+Tidy Data
+```{r}
+pre_chess_rating_matrix[, 2] <- round(pre_chess_rating_matrix[,2], digits = 0)
+
+final_df <- cbind(processed_data, pre_chess_rating_matrix[, 2])
+```
+
+```{r}
+head(final_df)
+```
+```{r}
+path <- getwd()
+write.csv(final_df, file.path(path, "chess_data.csv"))
+```
