@@ -20,8 +20,6 @@ Project 1: In this project, you’re given a text file with chess tournament res
 
 Loading and Reading the Data
 ```{r}
-library(readr, quietly = TRUE)
-library(stringr, quietly = TRUE)
 library(tidyverse, quietly = TRUE)
 
 url = 'https://raw.githubusercontent.com/MathewKatz/CUNYSPS/main/tournamentinfo.txt'
@@ -78,9 +76,14 @@ final_df <- cbind(processed_data, pre_chess_rating_matrix[, 2])
 ```
 
 ```{r}
-head(final_df)
+newdf = subset(final_df, select = -c(player_number) )
 ```
+
+```{r}
+head(newdf)
+```
+
 ```{r}
 path <- getwd()
-write.csv(final_df, file.path(path, "chess_data.csv"))
+write.csv(newdf, file.path(path, "chess_data.csv"))
 ```
