@@ -1,0 +1,18 @@
+---
+title: "DATA_607_Project_One"
+author: "Mathew Katz"
+date: "2022-09-25"
+output:
+  pdf_document: default
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
