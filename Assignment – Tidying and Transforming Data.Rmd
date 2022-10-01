@@ -1,0 +1,108 @@
+---
+title: "Assignment – Tidying and Transforming Data"
+author: "Mathew Katz"
+date: "2022-10-01"
+output:
+  pdf_document: default
+  html_document: default
+---
+Read in necessary libraries: 
+```{r} 
+library(tidyr)  
+library(dplyr)
+library(stringr)
+library(ggplot2)
+```
+Read in csv and look at it:
+```{r}
+flights <- read.csv(file = 'flight_tidying.csv') 
+flights 
+```
+Look at structure of csv:
+```{r}
+str(flights) 
+```
+Change columnn names to 'better' names
+```{r}
+flights <- flights %>% 
+    rename('Airline' = 1, 'Flight.Status' = 2)
+flights
+```
+Remove NAs and empty rows in csv:
+```{r}
+flights <- flights %>% #
+            filter(! is.na(Flight.Status) &  
+                     str_length(Flight.Status) > 0) 
+flights
+```
+Turn csv into dataframe:
+```{r}
+df <- data.frame(flights)
+head(df)
+```
+Add missing airline information:
+```{r}
+df[2, "Airline"] <- "Alaska"
+df[4, "Airline"] <- "AM WEST"
+df
+```
+Lengthen data by increasing the number of rows and decreasing the number of columns:
+```{r}
+df <- df %>%
+        pivot_longer(!c("Airline", "Flight.Status"),
+                     names_to = "Destination",               
+                     values_to = "Count")      
+df
+```
+Write to CSV:
+```{r}
+write.csv(df, "./clean_flight_tidying.csv", row.names=FALSE)
+```
+Create two new dataframes of delayed and non time flights to graph them:
+```{r}
+delayed_flights <- df %>%
+                    filter(df$Flight.Status == "delayed")
+delayed_flights
+```
+```{r}
+on_time_flights <- df %>%
+                    filter(df$Flight.Status == "on time")
+on_time_flights
+```
+Graph Delayed Flights:
+```{r}
+ delayed_bar_graph <- ggplot(data=delayed_flights, aes(x=Destination, y=Count, fill=Airline))
+    delayed_bar_graph <- delayed_bar_graph +  ggtitle('Delayed Flights') +
+            geom_bar(stat="identity", position=position_dodge()) 
+delayed_bar_graph
+```
+AM WEST has more delayed flights than Alaska in ever city but Seattle. 
+
+Graph On-Time Flights:
+```{r}
+ ontime_bar_graph <- ggplot(data=on_time_flights, aes(x=Destination, y=Count, fill=Airline))
+    ontime_bar_graph <- ontime_bar_graph +  ggtitle('On-Time Flights') +
+            geom_bar(stat="identity", position=position_dodge()) 
+ontime_bar_graph
+```
+AM WEST has more on-time flights than Alaska in Los Angeles, Phoenix, and San Diego. 
+Alaska has more on-time flights than AM WEST in San Francisco and Seattle. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
