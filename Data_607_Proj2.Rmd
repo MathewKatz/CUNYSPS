@@ -1,0 +1,155 @@
+---
+title: "Project 2"
+author: "Mathew Katz"
+date: "2022-10-08"
+output:
+  pdf_document: default
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+```{r}
+library(tidyr)
+library(ggplot2)
+library(dplyr)
+library(readr)
+```
+
+Data for dataset number one is captured from the 2017 American Community Survey using the tidycensus package. We only want to look at the name, whether the dollar amount is income or rent, and the estimated dollar amount. 
+```{r}
+df1=us_rent_income
+df2=df1[c("NAME","variable","estimate")]
+head(df2)
+```
+Let's "widen" the data; increasing the number of columns and decreasing the number of rows.
+```{r}
+df=pivot_wider(df2,names_from=variable,values_from = estimate)
+head(df)
+```
+Let's look at the US territories sorted by income (high to low.)
+```{r}
+income_sorted<- df[order(df$income, decreasing = TRUE),]  
+income_sorted
+```
+Let's look at the US territories sorted by rent (high to low.)
+```{r}
+rent_sorted<- df[order(df$rent, decreasing = TRUE),]  
+rent_sorted
+```
+This bar plot will show the seven highest income territories in the US.
+```{r}
+library(ggplot2)
+i<-ggplot(data=head(income_sorted, n=7), aes(x=NAME, y=income)) +
+  geom_bar(stat="identity")
+i
+```
+This bar plot will show the seven highest rent territories in the US.
+```{r}
+r<-ggplot(data=head(rent_sorted, n=7), aes(x=NAME, y=rent)) +
+  geom_bar(stat="identity")
+r
+```
+----------------------------------------------------------------------------------------------------------------
+Data for dataset number two looks at median weekly earnings of full-time wage and salary workers by detailed occupation and sex.
+```{r}
+work = read_csv('work.csv')
+head(work)
+```
+Let's "gather” a key-value pair across multiple columns and also separate the data frame into multiple columns. 
+```{r}
+work %>% 
+    gather(key, value, 2:7) %>% 
+    separate(key, into=c("gender", "class"), sep="_") -> work1
+head(work1)
+```
+Let's change the dollar amounts from characters to numbers and get rid of NAs.
+```{r}
+work1 %>% mutate(value=as.numeric(value)) %>% na.omit() -> work1
+head(work1)
+```
+Histogram of Male, Female, and Total weekly income:
+```{r}
+work1 %>% 
+    filter(class=='weekly') %>%
+    ggplot(aes(x=value)) + 
+    geom_histogram(bins=50) + 
+    facet_grid(gender ~ .)
+```
+Male, Female, and Total median income:
+```{r}
+work1 %>% 
+    filter(class == 'weekly') %>% 
+    group_by(gender) %>% 
+    summarize(median(value))
+```
+Verification of Male and Female median income:
+```{r}
+median(na.omit(as.numeric(work$M_weekly)))
+median(na.omit(as.numeric(work$F_weekly)))
+```
+----------------------------------------------------------------------------------------------------------------
+Data for dataset number three is a database of all of the mass shootings in the US from 1966-2016. 
+```{r}
+mass_shootings <- read_csv('mass_shootings.csv')
+head(mass_shootings)
+```
+We're going to specifically look at mass shootings done at a school: 
+```{r}
+school_shooting <- mass_shootings %>% filter(`School Related`=="Yes")
+head(school_shooting)
+```
+Let's look at the columns of the dataframe:
+```{r}
+names(school_shooting)
+```
+Create a subset dataframe from the 'school shooting' database:
+```{r}
+school <- school_shooting %>% select(`State`,`Total Number of Fatalities`,
+                            `Day of Week`,
+                            `Shooter Age(s)`,
+                            `Shooter Race`,
+                            `Possible Motive - General`,
+                            `History of Mental Illness - General`)
+head(school)
+```
+Which state has had the most school shootings? 
+```{r}
+school %>% count(`State`) %>% arrange(desc(n))
+```
+I'd assume that the main reason why California might seem to have a disproportionately large number of mass shootings is because California has a large number of people. 
+Here is a list of the top ten most populated states in the country:
+
+California (Population: 39,613,493)
+Texas (Population: 29,730,311)
+Florida (Population: 21,944,577)
+New York (Population: 19,299,981)
+Pennsylvania (Population: 12,804,123)
+Illinois (Population: 12,569,321)
+Ohio (Population: 11,714,618)
+Georgia (Population: 10,830,007)
+North Carolina (Population: 10,701,022)
+Michigan (Population: 9,992,427)
+
+What race has the majority of school shooters been? 
+```{r}
+school %>% count(`Shooter Race`) %>% arrange(desc(n))
+```
+What age is the most likely age for a person to be a school shooter?
+```{r}
+school %>% count(`Shooter Age(s)`) %>% arrange(desc(n))
+```
+
+There is already a regulation of all handgun purchases by the federal government. All handgun purchases require that you be at least 21 years of age per those federal regulations. Rifles, or long guns as they are usually referred to, are a different story. The individual states have gotten involved when it comes to long guns and, as a result, there are variances from state to state. I think the federal government should also regulate long gun purchases and require the legal age to be 21 years old. Why? The second most common shooter age of the school shooters in the research above was 18 year olds. 18 year olds are simply too young to purchase firearms.  
+
+
+
+
+
+
