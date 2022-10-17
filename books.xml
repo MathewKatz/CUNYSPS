@@ -1,8 +1,24 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd">
-<article lang="">
-  <informaltable frame="all">
-    <tgroup cols="5"><thead><row><entry><para>Book Title</para></entry><entry><para>Author</para></entry><entry><para>Originally Published</para></entry><entry><para>Genre</para></entry><entry><para>Page Count</para></entry></row></thead><tbody><row><entry><para>The Martian</para></entry><entry><para>Andy Weir</para></entry><entry><para>2011</para></entry><entry><para>Science Fiction</para></entry><entry><para>369</para></entry></row><row><entry><para>Immune</para></entry><entry><para>Philipp Dettmer</para></entry><entry><para>2021</para></entry><entry><para>Science Non-Fiction</para></entry><entry><para>368</para></entry></row><row><entry><para>The Stand</para></entry><entry><para>Stephen King</para></entry><entry><para>1978</para></entry><entry><para>Horror Fiction</para></entry><entry><para>1152</para></entry></row></tbody></tgroup>
-  </informaltable>
-  <para/>
-</article>
+<?xml version="1.0" encoding="UTF-8" ?>
+<root>
+  <row>
+    <Author>Andy Weir</Author>
+    <Genre>Science Fiction</Genre>
+    <Book_Title>The Martian</Book_Title>
+    <Originally_Published>2011</Originally_Published>
+    <Page_Count>369</Page_Count>
+  </row>
+  <row>
+    <Author>Philipp Dettmer</Author>
+    <Genre>Science Non-Fiction</Genre>
+    <Book_Title>Immune</Book_Title>
+    <Originally_Published>2021</Originally_Published>
+    <Page_Count>368</Page_Count>
+  </row>
+  <row>
+    <Author>Stephen King</Author>
+    <Genre>Horror Fiction</Genre>
+    <Book_Title>The Stand</Book_Title>
+    <Originally_Published>1978</Originally_Published>
+    <Page_Count>1152</Page_Count>
+  </row>
+</root>
