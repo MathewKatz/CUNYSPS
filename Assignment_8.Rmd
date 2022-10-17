@@ -1,0 +1,48 @@
+---
+title: "Assignment_8"
+author: "Mathew Katz"
+date: "2022-10-17"
+output:
+  pdf_document: default
+  html_document: default
+---
+Load in libraries needed:
+```{r}
+library(XML)
+library(RCurl)
+library(jsonlite)
+```
+
+Read in HTML file to RStudio:
+```{r}
+htmlurl <- getURL('https://raw.githubusercontent.com/MathewKatz/CUNYSPS/main/books.html')
+x <- readHTMLTable(htmlurl)
+df_html<-data.frame(x)
+df_html
+```
+For some reason, there is a 'NULL' in the column names. Let's remove it.
+
+
+First let's look at the column names:
+```{r}
+names(df_html)
+```
+Change column names accordingly:
+```{r}
+df_html <- setNames(df_html, c('Book_Title', 'Author','Originally_Published', 'Genre', 'Page_Count'))
+df_html
+```
+Read in XML file to RStudio:
+```{r}
+xmlurl <- getURL('https://raw.githubusercontent.com/MathewKatz/CUNYSPS/main/books.xml')
+y <- xmlParse(xmlurl)
+df_xml <- xmlToDataFrame(y)
+df_xml
+```
+Read in JSON file to RStudio:
+```{r}
+jsonurl <- getURL('https://raw.githubusercontent.com/MathewKatz/CUNYSPS/main/books.json')
+df_json <- fromJSON(jsonurl)
+df_json
+```
+The three dataframes are identical! 
