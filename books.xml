@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <root>
   <row>
-    <Author>Andy Weir</Author>
-    <Genre>Science Fiction</Genre>
     <Book_Title>The Martian</Book_Title>
+    <Author>Andy Weir</Author>
     <Originally_Published>2011</Originally_Published>
+    <Genre>Science Fiction</Genre>
     <Page_Count>369</Page_Count>
   </row>
   <row>
-    <Author>Philipp Dettmer</Author>
-    <Genre>Science Non-Fiction</Genre>
     <Book_Title>Immune</Book_Title>
+    <Author>Philipp Dettmer</Author>
     <Originally_Published>2021</Originally_Published>
+    <Genre>Science Non-Fiction</Genre>
     <Page_Count>368</Page_Count>
   </row>
   <row>
-    <Author>Stephen King</Author>
-    <Genre>Horror Fiction</Genre>
     <Book_Title>The Stand</Book_Title>
+    <Author>Stephen King</Author>
     <Originally_Published>1978</Originally_Published>
+    <Genre>Horror Fiction</Genre>
     <Page_Count>1152</Page_Count>
   </row>
 </root>
