@@ -1,0 +1,28 @@
+---
+title: "Working with Web APIs"
+author: "Mathew Katz"
+date: "2022-10-31"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(dplyr)
+```
+
+```{r}
+url <- "https://api.nytimes.com/svc/movies/v2/reviews/search.json?query=godfather&api-key="
+api <- "krQNO5dlYnDwkfKePaG4yaG0uMcEhZSJ"
+path <- paste(url,api, sep = "")
+```
+
+```{r}
+df <- as.data.frame(fromJSON(path))
+```
+
+```{r}
+head(df)
+```
