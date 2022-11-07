@@ -1,0 +1,465 @@
+---
+title: "SentAnalysisData607"
+author: "Mathew Katz"
+date: "2022-11-06"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+Firstly I am going to post a bunch of code from Text Mining with R, Chapter 2 (Sentiment Analysis.) 
+{https://www.tidytextmining.com/sentiment.html}
+
+```{r}
+library(tidytext)
+get_sentiments("afinn")
+```
+
+```{r}
+get_sentiments("bing")
+```
+
+```{r}
+get_sentiments("nrc")
+```
+
+```{r}
+library(janeaustenr)
+library(dplyr)
+library(stringr)
+
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+```
+
+```{r}
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+tidy_books %>%
+  filter(book == "Emma") %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+```
+
+```{r}
+library(tidyr)
+
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+```{r}
+pride_prejudice <- tidy_books %>% 
+  filter(book == "Pride & Prejudice")
+
+pride_prejudice
+```
+
+```{r}
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(
+  pride_prejudice %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  pride_prejudice %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+```
+
+```{r}
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+```{r}
+get_sentiments("nrc") %>% 
+  filter(sentiment %in% c("positive", "negative")) %>% 
+  count(sentiment)
+```
+
+```{r}
+get_sentiments("bing") %>% 
+  count(sentiment)
+```
+
+```{r}
+bing_word_counts <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+bing_word_counts
+```
+
+```{r}
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment",
+       y = NULL)
+```
+
+```{r}
+custom_stop_words <- bind_rows(tibble(word = c("miss"),  
+                                      lexicon = c("custom")), 
+                               stop_words)
+
+custom_stop_words
+```
+
+```{r}
+library(wordcloud)
+
+tidy_books %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 100))
+```
+
+```{r}
+library(reshape2)
+
+tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+```
+
+```{r}
+p_and_p_sentences <- tibble(text = prideprejudice) %>% 
+  unnest_tokens(sentence, text, token = "sentences")
+```
+
+```{r}
+p_and_p_sentences$sentence[2]
+```
+
+
+```{r}
+austen_chapters <- austen_books() %>%
+  group_by(book) %>%
+  unnest_tokens(chapter, text, token = "regex", 
+                pattern = "Chapter|CHAPTER [\\dIVXLC]") %>%
+  ungroup()
+
+austen_chapters %>% 
+  group_by(book) %>% 
+  summarise(chapters = n())
+```
+
+
+```{r}
+bingnegative <- get_sentiments("bing") %>% 
+  filter(sentiment == "negative")
+
+wordcounts <- tidy_books %>%
+  group_by(book, chapter) %>%
+  summarize(words = n())
+
+tidy_books %>%
+  semi_join(bingnegative) %>%
+  group_by(book, chapter) %>%
+  summarize(negativewords = n()) %>%
+  left_join(wordcounts, by = c("book", "chapter")) %>%
+  mutate(ratio = negativewords/words) %>%
+  filter(chapter != 0) %>%
+  slice_max(ratio, n = 1) %>% 
+  ungroup()
+```
+
+Let's extend the code in two ways:
+Work with a different corpus of our choosing, and
+Incorporate at least one additional sentiment lexicon (possibly from another R package that I’ve found through research).
+
+```{r}
+library('readr')
+scripts <- read_csv("RickAndMortyScripts.csv")
+```
+
+
+```{r}
+nrc <- get_sentiments("nrc")
+bing <- get_sentiments("bing")
+afinn <- get_sentiments("afinn")
+```
+
+```{r}
+scripts = scripts %>% rename(Index = "index",
+                   Season.No = "season no.",
+                   Episode.No = "episode no.",
+                   Episode.Name = "episode name",
+                   Character.Name = "name",
+                   Dialog = "line")
+```
+
+```{r}
+# Head of the table
+head(scripts, 4)
+
+# Tail of the table
+tail(scripts, 4)
+
+# Summary
+summary(scripts)
+```
+
+Clean Corpus Function:
+This predefined function is going to clean the text from:
+
+the punctuation - removePunctuation
+extra white space - stripWhitespace
+transforms to lower case - tolower
+stopwords (common words that should be ignored) - stopwords
+numbers - removeNumbers
+```{r}
+cleanCorpus <- function(text){
+  # punctuation, whitespace, lowercase, numbers
+  text.tmp <- tm_map(text, removePunctuation)
+  text.tmp <- tm_map(text.tmp, stripWhitespace)
+  text.tmp <- tm_map(text.tmp, content_transformer(tolower))
+  text.tmp <- tm_map(text.tmp, removeNumbers)
+  
+  # removes stopwords
+  stopwords_remove <- c(stopwords("en"), c("thats","weve","hes","theres","ive","im",
+                                                "will","can","cant","dont","youve","us",
+                                                "youre","youll","theyre","whats","didnt"))
+  text.tmp <- tm_map(text.tmp, removeWords, stopwords_remove)
+
+  return(text.tmp)
+}
+```
+These predefined functions will process the text depending on the case:
+
+Unigrams take only 1 word at a time
+Bigrams take 2 sequential words at a time
+Trigrams (you guessed) take 3 sequential words at a time
+Eg. text: "come on morty"
+
+Unigram: "come", "on", "morty"
+Bigram: "come on", "on morty"
+Trigram: "come on morty"
+Term Document Matrix: it's a mathematical matrix that describes the frequency of terms that occur in a collection of documents. More simply put, is a matrix that has on:
+
+rows - words that can be found in the analysed documents
+columns - the documents in order
+values - the frequency of each word in each document
+
+Unigram:
+```{r}
+frequentTerms <- function(text){
+  
+  # create the matrix
+  s.cor <- VCorpus(VectorSource(text))
+  s.cor.cl <- cleanCorpus(s.cor)
+  s.tdm <- TermDocumentMatrix(s.cor.cl)
+  s.tdm <- removeSparseTerms(s.tdm, 0.999)
+  m <- as.matrix(s.tdm)
+  word_freqs <- sort(rowSums(m), decreasing = T)
+  
+  # change to dataframe
+  dm <- data.frame(word=names(word_freqs), freq=word_freqs)
+  
+  return(dm)
+}
+```
+Bigram:
+```{r}
+# Bigram tokenizer
+tokenizer_2 <- function(x){
+  NGramTokenizer(x, Weka_control(min=2, max=2))
+}
+
+# Bigram function 
+frequentBigrams <- function(text){
+
+  s.cor <- VCorpus(VectorSource(text))
+  s.cor.cl <- cleanCorpus(s.cor)
+  s.tdm <- TermDocumentMatrix(s.cor.cl, control=list(tokenize=tokenizer_2))
+  s.tdm <- removeSparseTerms(s.tdm, 0.999)
+  m <- as.matrix(s.tdm)
+  word_freqs <- sort(rowSums(m), decreasing=T)
+  dm <- data.frame(word=names(word_freqs), freq=word_freqs)
+  
+  return(dm)
+}
+```
+Trigram:
+```{r}
+# Trigram tokenizer
+tokenizer_3 <- function(x){
+  NGramTokenizer(x, Weka_control(min=3, max=3))
+}
+
+# Trigram function 
+frequentTrigrams <- function(text){
+
+  s.cor <- VCorpus(VectorSource(text))
+  s.cor.cl <- cleanCorpus(s.cor)
+  s.tdm <- TermDocumentMatrix(s.cor.cl, control=list(tokenize=tokenizer_3))
+  s.tdm <- removeSparseTerms(s.tdm, 0.999)
+  m <- as.matrix(s.tdm)
+  word_freqs <- sort(rowSums(m), decreasing=T)
+  dm <- data.frame(word=names(word_freqs), freq=word_freqs)
+  
+  return(dm)
+}
+```
+Bing Lexicon cathegorizes the words into positives and negatives.
+
+To be able to do so in our data, first we make a dataframe that splits all the words in 1 dialogue onto rows. Afterwards, we can join our data with the lexicon, leaving us with a beautiful classification of our words.
+
+
+```{r}
+# Creating our tokens
+tokens <- scripts %>% 
+  mutate(dialogue = as.character(scripts$Dialog)) %>% 
+  unnest_tokens(word, dialogue)
+
+tokens %>% head(5) %>% select(Character.Name, word)
+```
+
+```{r}
+tokens %>% 
+  # append the bing sentiment and prepare the data
+  inner_join(bing, "word") %>%
+  count(word, sentiment, sort=T) %>% 
+  acast(word ~ sentiment, value.var = "n", fill=0) %>% 
+  
+  # wordcloud
+  comparison.cloud(colors=c("#991D1D", "#327CDE"), max.words = 100)
+```
+How is the overall mood in Rick & Morty?
+
+The nrc lexicon cathegorizes the words in 10 moods:
+
+positive
+negative
+anger
+anticipation
+disgust
+fear
+joy
+sadness
+surprise
+trust
+Let's look at how these sentiments rank in out data:
+```{r}
+sentiments <- tokens %>% 
+  inner_join(nrc, "word") %>%
+  count(sentiment, sort=T)
+
+sentiments
+```
+Afinn Lexicon ranks every word from -5 to 5, where:
+
+-5 being the most negative
++5 being the most positive
+```{r}
+tokens %>% 
+  # Count how many word per value
+  inner_join(afinn, "word") %>% 
+  count(value, sort=T) %>%
+  
+  # Plot
+  ggplot(aes(x=value, y=n)) +
+  geom_bar(stat="identity", aes(fill=n), show.legend = F, width = 0.5) +
+  geom_label(aes(label=n)) +
+  scale_fill_gradient(low="#85C1E9", high="#3498DB") +
+  scale_x_continuous(breaks=seq(-5, 5, 1)) +
+  labs(x="Score", y="Frequency", title="Word count distribution over intensity of sentiment: Neg -> Pos") +
+  theme_bw()
+```
+
+```{r}
+tokens %>% 
+  # by word and value count number of occurences
+  inner_join(afinn, "word") %>% 
+  count(word, value, sort=T) %>% 
+  mutate(contribution = n * value,
+         sentiment = ifelse(contribution<=0, "Negative", "Positive")) %>% #another variable
+  arrange(desc(abs(contribution))) %>% 
+  head(20) %>% 
+  
+  # plot
+  ggplot(aes(x=reorder(word, contribution), y=contribution, fill=sentiment)) +
+  geom_col(aes(fill=sentiment), show.legend = F) +
+  labs(x="Word", y="Contribution", title="Words with biggest contributions in positive/negative moods") +
+  coord_flip() +
+  scale_fill_manual(values=c("#FA8072", "#08439A")) + 
+  theme_bw()
+
+```
+
+
+```{r}
+library("stopwords")
+
+# Create a dataframe with stopwords
+stopwords_script <- tibble(word = c(stopwords("en"), c("thats","weve","hes","theres","ive","im",
+                                                           "will","can","cant","dont","youve","us",
+                                                           "youre","youll","theyre","whats","didnt")))
+print(stopwords_script)
+
+
+# Create the dataframe of tokens
+scripts %>% 
+  mutate(dialogue = as.character(scripts$Dialog)) %>% 
+  filter(Character.Name %in% c("Rick","Morty","Beth","Jerry","Summer")) %>% 
+  
+  # removes stopwords
+  unnest_tokens(word, dialogue) %>%
+  anti_join(stopwords_script, by="word") %>%
+  
+  # top N frequent words per character
+  count(Character.Name, word) %>% 
+  group_by(Character.Name) %>% 
+  arrange(desc(n)) %>% 
+  slice(1:10) %>% 
+  
+  mutate(word2 = factor(paste(word, Character.Name, sep="__"),
+                        levels = rev(paste(word, Character.Name, sep="__"))))
+```
+
+Rick and Morty's script made this project very enjoyable.  
