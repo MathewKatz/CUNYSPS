@@ -1,0 +1,17 @@
+---
+title: "RecSys"
+author: "Mathew Katz"
+date: "2022-11-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+Your task is to analyze an existing recommender system that you find interesting.  You should:
+
+Perform a Scenario Design analysis as described below.  Consider whether it makes sense for your selected recommender system to perform scenario design twice, once for the organization (e.g. Amazon.com) and once for the organization's customers.
+Attempt to reverse engineer what you can about the site, from the site interface and any available information that you can find on the Internet or elsewhere.
+Include specific recommendations about how to improve the site's recommendation capabilities going forward. 
+Create your report using an R Markdown file, and create a discussion thread with a link to the GitHub repo where your Markdown file notebook resides.  You are not expected to need to write code for this discussion assignment.
+
+When YouTube’s recommendations are at their best, they connect billions of people around the world to content that uniquely inspires, teaches, and entertains.  Think about the amount of videos on youtube! How hard it would be to navigate all of the books in a massive library without the help of librarians? It's the same idea. Recommendations drive a significant amount of the overall viewership on YouTube, even more than channel subscriptions or search. You can find recommendations at work in two main places: your homepage and the 'Up Next' panel. Your homepage is what you see when you first open YouTube—it displays a mixture of personalized recommendations, subscriptions, and the latest news and information. The 'Up Next' panel appears when you’re watching a video and suggests additional content based on what you’re currently watching, alongside other videos that we think you may be interested in. The system compares your viewing habits with those that are similar to you and uses that information to suggest other content you may want to watch. So if you like baseball videos and the system notices that others who like the same tennis videos as you also enjoy Disney videos, you may be recommended Disney videos, even if you’ve never watched a single one before. It makes sense that the perform scenario is designed twice, once for the organization and once for the organization's customers. A way to improve the system would be to make misinformation less accessible. Many studies have shown that many Americans cannot tell what news is fake and what news is real. This can create confusion and misunderstanding about important social and political issues. While some examples of fake news seem innocent or just an attempt at fun, a lot of fake news can be damaging, malicious and even dangerous.   
