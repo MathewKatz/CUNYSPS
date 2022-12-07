@@ -1,0 +1,175 @@
+---
+title: "mlb"
+author: "Mathew Katz"
+date: "2022-11-22"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+Read in necessary libraries:
+```{r}
+library(xml2)
+library(rvest)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(tidyverse)
+```
+The first data will be pulled from a website called Fangraphs. FanGraphs.com is a website run by Fangraphs Inc., located in Arlington, Virginia, and created and owned by David Appelman that provides statistics for every player in Major League Baseball history. This specific link below will take you to a leaderboard of every team and their list of stats from 2000-2021.  
+```{r}
+url <- "https://www.fangraphs.com/leaders.aspx?pos=all&stats=bat&lg=all&qual=0&type=8&season=2021&month=0&season1=2000&ind=1&team=0,ts&rost=0&age=0&filter=&players=0&startdate=&enddate=&page=1_700"#leaderboard 2000-2021
+
+url_page <- read_html(url)   #Read in the content from a .html file. 
+                             #This is generalized, reading in all body text.
+
+url_table <- url_page %>% html_nodes("table")  %>% .[17]  %>%#Take the exact 
+  html_table() %>% .[[1]]                                   #table we need
+```
+The data has been pulled into RStudio using textreadr (a small collection of convenience tools for reading text documents into R.)
+
+Now let's take the pulled data, clean it up, and put it into a dataframe. 
+```{r}
+df <- as.data.frame(url_table)        #turn data into a dataframe
+df <- df[-c(1,3),]                   #remove unnecessary rows
+names(df) <- df[1,]                 #make the first row the name of the columns
+df <-df[-1,]                       #remove now redundant line
+head(df)                          #look at a small part of the top of the data
+```
+For a little extra data to look at I wanted to use the Lahman Database.This database contains pitching, hitting, and fielding statistics for Major League Baseball from 1871 through 2021. It is an incredible resource (https://www.seanlahman.com/baseball-archive/statistics/)
+```{r}
+df2 <- read.csv("/Users/mathew.katz/Desktop/SPS Python/baseballdatabank-2022.2/core/Teams.csv") 
+#read in csv
+```
+
+We only want the years 2000-2021:
+```{r}
+df2 = df2[df2$yearID >= "2000", ] #only keep data from 2000 and on
+head(df2)                         #look at a small part of the top of the data
+```
+
+Clean up lahman data:
+```{r}
+names(df2)[names(df2) == 'franchID'] <- 'Team'#change name of lahman category 
+names(df2)[names(df2) == 'yearID'] <- 'Season' #name to match fangraphs
+df2[df2 == 'ANA'] <- 'LAA'   #There were a few teams that move locations
+df2[df2 == 'MIA'] <- 'FLA'   #/changed names that needed to be edited
+df2[df2 == 'MON'] <- 'WSN'
+df2[df2 == 'TBD'] <- 'TBR'
+df[df == 'ANA'] <- 'LAA'
+df[df == 'MIA'] <- 'FLA'
+df[df == 'MON'] <- 'WSN'
+df[df == 'TBD'] <- 'TBR'
+```
+
+Merge the fangraphs and lahman data:
+```{r}
+data <- merge(df,df2,by=c("Team","Season")) #merge the data
+head(data)
+```
+One last dataset pulled from the Sports Reference site to get just pitching data that wasn't available in the lahman database or fangraphs: 
+```{r}
+df3 <- read.csv("/Users/mathew.katz/Desktop/SPS Python/bbref.csv")#read in csv
+df3[df3 == 'ANA'] <- 'LAA'
+df3[df3 == 'MIA'] <- 'FLA'
+df3[df3 == 'MON'] <- 'WSN'
+df3[df3 == 'TBD'] <- 'TBR'
+df3$OOBP = (df3$H + df3$BB + df3$HBP) / (df3$AB + df3$BB + df3$HBP + df3$SF)   
+#Create opposing on base percentage category
+df3$OSLG = ((df3$X1B) + (df3$X2B*2) + (df3$X3B*3) + (df3$HR*4))/(df3$AB)       
+#Create opposing slugging percentage category
+pitchdf <- df3[, c("Team", "Season", "OOBP", "OSLG")]                           
+#pull specific categories we need
+```
+Merge the fangraphs lahman data, and baseball reference data:
+```{r}
+data <- merge(data,pitchdf,by=c("Team","Season"))        #merge the data
+```
+
+Create a new category called run differential (Run differential is calculated by subtracting runs allowed from runs scored. Run differential is positive when a team scores more runs than it allows; it is negative when a team allows more runs than it scores.): 
+```{r}
+data$R.x <- as.integer(data$R.x)  #change data from categorical to numerical 
+data$RA <- as.integer(data$RA)    #change data from categorical to numerical
+data$RunDifferential = data$R.x - data$RA  #change new column 
+```
+
+Create a new category called Playoffs using an ifelse statement that if the team won the division or if the team won the wildcard, they get a 'Yes,' that they made the playoffs. If the team didn't win the division or if the team didn't win the wildcard, they get a 'No,' that they did NOT make the playoffs:  
+```{r}
+data$Playoffs <- ifelse(data$DivWin == 'Y' | data$WCWin == 'Y', 'Y', 
+                  ifelse(data$DivWin == 'N' | data$WCWin == 'N', 'N'))
+#ifelse statement for if made playoffs
+```
+
+I want to look at the correlation between Run Differential and Wins: 
+```{r}
+plot(data$RunDifferential, data$W, xlab="Run Differential", ylab="Wins", pch=19, col="red", main="RD Vs Wins")
+#scatterplot
+```
+It was interesting to see the extreme outliers in that scatterplot. What was that?? The 2020 Major League Baseball season that began on July 23 and ended on September 27 with only 60 games amidst the COVID-19 pandemic. Let's remove 2020 from our data.
+
+```{r}
+moneyball <- data[data$Season != 2020, ]  # Remove 2020 
+```
+
+```{r}
+plot(moneyball$RunDifferential, moneyball$W, xlab="Run Difference", ylab="Wins", pch=19, col="blue", main="RD Vs Wins")
+#new scatterplot
+```
+That's better!
+
+Regression model to predict wins:
+```{r}
+WinsReg = lm(W ~ RunDifferential, data=moneyball) #regression model
+summary(WinsReg)
+```
+Regression model to predict runs scored: {RS=OBP*x1+SLG*x2+BA*x3}
+```{r}
+RunsReg = lm(R.x ~ OBP + SLG + AVG, data=moneyball) #regression model
+summary(RunsReg)
+```
+Lets try removing BAVG as some analysts say it isn't as important:
+```{r}
+RunsReg2 = lm(R.x ~ OBP + SLG, data=moneyball) #regression model
+summary(RunsReg2)
+```
+Regression model to predict runs allowed:  {RA=OOBPx1+OSLG*x2}
+```{r}
+RunsReg3 = lm(RA ~ OOBP + OSLG, data=moneyball) #regression model
+summary(RunsReg3)
+```
+Predicting Formula:
+```{r}
+PRW = function(obp = 0, slg = 0, oobp = 0, oslg = 0){
+  dat = data.frame(OBP = obp,
+                   SLG = slg,
+                   OOBP = oobp,
+                   OSLG = oslg)
+  RS = predict(RunsReg2, dat)
+  RA = predict(RunsReg3, dat)
+  RunDifferential = RS - RA
+  W = predict(WinsReg, data.frame(RunDifferential))
+  res = c(RS,RA,W)
+  return(res)
+}
+```
+
+Predict Year 2016 from 2015 data:
+```{r}
+dat_2015 = moneyball %>% dplyr::filter(Season == 2015) %>% dplyr::filter(Team == 'NYM')
+predict_2016 = PRW(dat_2015$OBP, dat_2015$SLG, dat_2015$OOBP, dat_2015$OSLG) 
+#predicting mets 2016 season wins
+```
+
+Compare with Real Data:
+```{r}
+dat_2016 = moneyball %>% filter(Season == 2016) %>% filter(Team == 'NYM') %>% select(R.x, RA, W) 
+#looking at mets 2016 season stats
+
+compare = rbind(predict_2016, dat_2016) #compare preds and actual data
+colnames(compare) = c('Run Scored', 'Run Allowed', 'Win')
+rownames(compare) = c('PREDICT', 'REAL')
+
+knitr::kable(compare) 
+```
