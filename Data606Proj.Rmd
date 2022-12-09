@@ -1,0 +1,207 @@
+---
+title: "Data606FinalProj"
+author: "Mathew Katz"
+date: "2022-12-06"
+output:
+  pdf_document: default
+  html_document: default
+---
+Abstract:
+
+This dataset is originally from the National Institute of Diabetes and Digestive and Kidney Diseases. The objective of the dataset is to diagnostically predict whether or not a patient has diabetes, based on certain diagnostic measurements included in the dataset. In 2019, 37.3 million Americans, or 11.3% of the population, had diabetes. 1.4 million Americans are diagnosed with diabetes every year. It is important to be able to diagnose such a worldwide problem. Several constraints were placed on the selection of these instances from a larger database. In particular, all patients here are females at least 21 years old of Pima Indian heritage.
+
+Import Libraries we will need:
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(corrplot)
+library(randomForest)
+library(caret)
+library(party)
+library(e1071)
+```
+
+Read in our Diabetes Dataset:
+```{r}
+df <- read_csv("diabetes.csv", show_col_types = FALSE)
+```
+
+Look at every column in the data frame:
+```{r}
+df %>% str()
+```
+
+Based off of pregnancies, glucose level, blood pressure, skin thickness, insulin level, BMI ,Diabetes Pedigree Function, and age let's predict whether someone has diabetes or not but first lets take a quick look at the data: 
+```{r}
+df%>% head()
+```
+The outcome column needs to be changed from a number to a factor (also called categorical or enumerative):
+```{r}
+df$Outcome <- as.factor(df$Outcome)
+
+levels(df$Outcome) <- c("No","Yes")
+```
+
+Summarize variables:
+```{r}
+df %>% summary()
+```
+Plots:
+```{r}
+plotpreg <- ggplot(data = df, aes(x = Pregnancies)) +
+  geom_histogram(color = "black", fill = "red") +
+  labs(title = "Pregnancies Histogram Plot", x = "Pregnancies", y = "Count")
+plotpreg
+```
+```{r}
+plotgluc <- ggplot(data = df, aes(x = Glucose)) +
+  geom_histogram(color = "black", fill = "orange") +
+  labs(title = "Glucose Histogram Plot", x = "Glucose", y = "Count")
+plotgluc
+```
+```{r}
+plotbp <- ggplot(data = df, aes(x = BloodPressure)) +
+  geom_histogram(color = "black", fill = "yellow") +
+  labs(title = "Blood Pressure Histogram Plot", x = "Blood Pressure", y = "Count")
+plotbp
+```
+```{r}
+plotst <- ggplot(data = df, aes(x = SkinThickness)) +
+  geom_histogram(color = "black", fill = "green") +
+  labs(title = "Skin Thickness Histogram Plot", x = "Skin Thickness", y = "Count")
+plotst
+```
+
+```{r}
+plotins <- ggplot(data = df, aes(x = Insulin)) +
+  geom_histogram(color = "black", fill = "blue") +
+  labs(title = "Insulin Histogram Plot", x = "Insulin", y = "Count")
+plotins
+```
+```{r}
+plotbmi <- ggplot(data = df, aes(x = BMI)) +
+  geom_histogram(color = "black", fill = "purple") +
+  labs(title = "BMI Plot", x = "BMI", y = "Count")
+plotbmi
+```
+
+```{r}
+plotdpf <- ggplot(data = df, aes(x = DiabetesPedigreeFunction)) +
+  geom_histogram(color = "black", fill = "grey") +
+  labs(title = "DiabetesPedigreeFunction", x = "DiabetesPedigreeFunction", y = "Count")
+plotdpf
+```
+
+```{r}
+plotage <- ggplot(data = df, aes(x = Age)) +
+  geom_histogram(color = "black", fill = "white") +
+  labs(title = "Age", x = "Age", y = "Count")
+plotage
+```
+
+```{r}
+plotout <- ggplot(data = df, aes(x = Outcome)) +
+  stat_count(fill = "black") +
+  labs(title = "Outcome Bar Plot", x = "Outcome", y = "Count") +
+  theme_minimal()
+plotout
+```
+Correlation of Variables:
+```{r}
+df_corr <- df[-9]
+df_corr <- cor(df_corr)
+corrplot(df_corr, method = "color", type = "lower",
+         addCoef.col = "black", col = COL2("RdYlBu"), number.cex = .5, tl.cex = .5)
+```
+There are moderately positive correlations between the Age and Pregnancy, and the Insulin and Skin Thickness attributes. This indicates that as the age of the patients increased so did the number of pregnancies, also as the quantity of insulin administered to the patients increased; the skin thickness increased likewise.
+
+Weak positive correlations can also be observed in the following attributes of the dataset; Insulin & Glucose, BMI & Skin Thickness, Blood Pressure & BMI, Age & Blood Pressure...
+
+Time to Train-Test-Split:
+```{r}
+nrows <- NROW(df)
+
+set.seed(42)                           
+
+index <- sample(1:nrows, 0.7 * nrows)  
+
+train <- df[index,]                 
+
+test <- df[-index,]                   
+```
+
+Random Forest Classifier:
+
+```{r}
+learn_rf <- randomForest(Outcome~., data=train, ntree=500, proximity=T, importance=T)
+
+pre_rf   <- predict(learn_rf, test[,-9])
+
+cm_rf    <- confusionMatrix(pre_rf, test$Outcome)
+
+cm_rf
+```
+CTree Classifier:
+
+```{r}
+learn_ct <- ctree(Outcome~., data=train, controls=ctree_control(maxdepth=2))
+
+pre_ct   <- predict(learn_ct, test[,-9])
+
+cm_ct    <- confusionMatrix(pre_ct, test$Outcome)
+
+cm_ct
+```
+Naive Bayes Classifier:
+
+```{r}
+learn_nb <- naiveBayes(train[,-9], train$Outcome)
+
+pre_nb <- predict(learn_nb, test[,-9])
+
+cm_nb <- confusionMatrix(pre_nb, test$Outcome)     
+
+cm_nb
+```
+The Random Forest Classifier performed the best with a 78% accuracy, 85.9% Sensitivity, and 63% Specificity.
+
+Let's see how our model does on two test subjects. A yes and a no diabetes:
+```{r}
+Y <- test[1,]  
+N <- test[2,]   
+
+print(Y)
+print(N)
+```
+
+Remove the outcome variable so it isn't there to mess with the model prediciton:
+```{r}
+Y$Outcome <- NULL
+
+N$Outcome <- NULL
+```
+
+Function that takes in a patient's variables and predicts if they have diabetes or not:
+```{r}
+patient_diabetes_predict <- function(new, method=learn_rf) {
+
+    new_pre <- predict(method, new)
+
+    new_res <- as.character(new_pre)
+
+    return(paste("Result: ", new_res, sep=""))
+
+}
+```
+
+Yes patient's prediction:
+```{r}
+patient_diabetes_predict(Y) 
+```
+No patient's prediction:
+```{r}
+patient_diabetes_predict(N) 
+```
+
+
